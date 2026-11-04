@@ -1,9 +1,11 @@
 import AppKit
 import DiffaryCore
+import SwiftUI
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let launch: Launch
     var window: NSWindow?
+    var model: AppModel?
 
     init(launch: Launch) { self.launch = launch }
 
@@ -14,7 +16,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                               backing: .buffered, defer: false)
         window.isReleasedWhenClosed = false  // we hold it in self.window
         window.title = "diffary — \(launch.repo.lastPathComponent)"
-        window.contentView = terminal
+        let model = AppModel(launch: launch)
+        self.model = model
+        window.contentView = NSHostingView(rootView: LayoutView(model: model, terminal: terminal))
         window.center()
         window.makeKeyAndOrderFront(nil)
         window.makeFirstResponder(terminal)

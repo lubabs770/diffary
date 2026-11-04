@@ -1,0 +1,97 @@
+import AppKit
+import DiffaryCore
+import SwiftUI
+
+@MainActor
+final class AppModel: ObservableObject {
+    let launch: Launch
+    @Published private(set) var settings = Settings()
+    @Published private(set) var theme = Theme.dark
+    @Published private(set) var warnings: [String] = []
+    @Published private(set) var changes: ChangeSet?
+    @Published private(set) var gitError: String?
+    @Published private(set) var selected: FileChange?
+    @Published private(set) var diff: FileDiff?
+
+    private var repoWatcher: FileWatcher?
+    private var configWatcher: FileWatcher?
+    private var appearanceObserver: NSKeyValueObservation?
+    private let work = DispatchQueue(label: "diffary.git")
+
+    var themesDir: URL { launch.configFile.deletingLastPathComponent().appendingPathComponent("themes") }
+
+    init(launch: Launch) {
+        self.launch = launch
+        reloadSettings()
+        refresh()
+        repoWatcher = FileWatcher(paths: [launch.repo], ignoring: ["/.git/objects/", "/.git/logs/"]) { [weak self] in
+            DispatchQueue.main.async { self?.refresh() }
+        }
+        repoWatcher?.start()
+        // Watch the config dir, not the file: editors save by replacing it.
+        let configDir = launch.configFile.deletingLastPathComponent()
+        if FileManager.default.fileExists(atPath: configDir.path) {
+            configWatcher = FileWatcher(paths: [configDir], debounce: 0.1) { [weak self] in
+                DispatchQueue.main.async { self?.reloadSettings() }
+            }
+            configWatcher?.start()
+        }
+        appearanceObserver = NSApp.observe(\.effectiveAppearance) { [weak self] _, _ in
+            DispatchQueue.main.async { self?.reloadSettings() }
+        }
+    }
+
+    func reloadSettings() {
+        let load = SettingsLoader.load(file: launch.configFile, overrides: launch.overrides)
+        let isDark = NSApp.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+        let resolved = ThemeLoader.resolve(name: load.settings.theme, systemIsDark: isDark, themesDir: themesDir)
+        let baseChanged = load.settings.baseBranch != settings.baseBranch
+        let diffChanged = load.settings.diffOptions != settings.diffOptions
+        settings = load.settings
+        theme = resolved.theme
+        warnings = load.warnings + resolved.warnings
+        if baseChanged { refresh() } else if diffChanged { loadDiff() }
+    }
+
+    func refresh() {
+        let repo = launch.repo, base = settings.baseBranch
+        work.async {
+            let result = Result { try GitChanges(repo: repo, baseBranch: base).load() }
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let set):
+                    self.changes = set
+                    self.gitError = nil
+                    // Keep the selection if the file is still changed; reload its diff.
+                    if let sel = self.selected {
+                        self.selected = set.files.first { $0.path == sel.path }
+                        self.loadDiff()
+                    }
+                case .failure(let error):
+                    self.changes = nil
+                    self.gitError = "\(error)"
+                }
+            }
+        }
+    }
+
+    func select(_ file: FileChange?) {
+        selected = file
+        loadDiff()
+    }
+
+    private func loadDiff() {
+        guard let file = selected, let base = changes?.base else { diff = nil; return }
+        let repo = launch.repo, options = settings.diffOptions
+        work.async {
+            let result = Result { try DiffLoader(repo: repo).load(file, base: base, options: options) }
+            DispatchQueue.main.async {
+                guard self.selected == file else { return }  // selection moved on
+                switch result {
+                case .success(let d): self.diff = d
+                case .failure(let e): self.diff = nil; self.gitError = "\(e)"
+                }
+            }
+        }
+    }
+}
