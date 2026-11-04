@@ -31,4 +31,8 @@ import Testing
     @Test func badSetIsAnError() {
         #expect(throws: (any Error).self) { try Launch.parse(["--set", "novalue"], cwd: cwd, env: env) }
     }
+
+    @Test func hiddenSelect() throws {
+        #expect(try Launch.parse(["--select", "src/a.swift"], cwd: cwd, env: env).select == "src/a.swift")
+    }
 }

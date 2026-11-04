@@ -5,6 +5,7 @@ public struct Launch: Sendable, Equatable {
     public let repo: URL
     public let configFile: URL
     public let overrides: [String: String]
+    public let select: String?
 
     public static func parse(_ args: [String], cwd: URL, env: [String: String]) throws -> Launch {
         try LaunchCommand.parse(args).resolve(cwd: cwd, env: env)
@@ -29,6 +30,8 @@ public struct LaunchCommand: ParsableCommand {
     @Option(name: .customLong("set"), help: "Override a config key, e.g. diff.view=side_by_side. Repeatable.")
     var overrides: [String] = []
 
+    @Option(help: .hidden) var select: String?
+
     public init() {}
 
     public func resolve(cwd: URL, env: [String: String]) throws -> Launch {
@@ -47,6 +50,7 @@ public struct LaunchCommand: ParsableCommand {
         return Launch(
             repo: repo.map(abs) ?? cwd.standardizedFileURL,
             configFile: config.map(abs) ?? SettingsLoader.defaultConfigFile(env: env),
-            overrides: map)
+            overrides: map,
+            select: select)
     }
 }

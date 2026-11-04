@@ -7,6 +7,7 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/apple/swift-argument-parser", from: "1.5.0"),
         .package(url: "https://github.com/LebJe/TOMLKit", from: "0.6.0"),
+        .package(url: "https://github.com/raspu/Highlightr", from: "2.2.1"),
     ],
     targets: [
         .target(
@@ -19,7 +20,7 @@ let package = Package(
         .binaryTarget(name: "GhosttyKit", path: "Frameworks/GhosttyKit.xcframework"),
         .executableTarget(
             name: "Diffary",
-            dependencies: ["DiffaryCore", "GhosttyKit"],
+            dependencies: ["DiffaryCore", "GhosttyKit", .product(name: "Highlightr", package: "Highlightr")],
             // Swift 5 mode: Ghostty's C callbacks hop threads by hand; strict
             // Swift 6 checking fights that without making it safer.
             swiftSettings: [.swiftLanguageMode(.v5)],

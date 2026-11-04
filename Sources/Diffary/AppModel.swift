@@ -64,6 +64,9 @@ final class AppModel: ObservableObject {
                 case .success(let set):
                     self.changes = set
                     self.gitError = nil
+                    if self.selected == nil, let want = self.launch.select {
+                        self.selected = set.files.first { $0.path == want }
+                    }
                     // Keep the selection if the file is still changed; reload its diff.
                     if let sel = self.selected {
                         self.selected = set.files.first { $0.path == sel.path }
