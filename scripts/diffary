@@ -20,4 +20,5 @@ while (($#)); do
   esac
 done
 ((have_repo)) || out=("$PWD" ${out[@]+"${out[@]}"})
-exec open -n -a "$APP" --args "${out[@]}"
+# `open` doesn't pass this shell's env to the app; carry the config location over.
+exec open -n -a "$APP" ${XDG_CONFIG_HOME:+--env "XDG_CONFIG_HOME=$XDG_CONFIG_HOME"} --args "${out[@]}"
