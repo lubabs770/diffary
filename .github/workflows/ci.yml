@@ -5,6 +5,7 @@ on:
 jobs:
   test:
     runs-on: macos-15
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v5
       - name: Fetch GhosttyKit
@@ -12,4 +13,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: scripts/fetch-ghosttykit.sh || echo "::warning::GhosttyKit release missing; run the GhosttyKit workflow"
       - run: swift build
-      - run: swift test
+      - run: swift test --no-parallel
