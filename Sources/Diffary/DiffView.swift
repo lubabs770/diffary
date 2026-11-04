@@ -23,7 +23,13 @@ struct DiffView: View {
             case .empty?: placeholder("No differences with current options")
             case .text(let hunks)?:
                 GeometryReader { geo in
-                    let width = contentWidth(hunks, nsFont, viewport: geo.size.width)
+                    let textW = textWidth(hunks, nsFont)
+                    // half() lays out num, code, Spacer: 2 gaps.
+                    let halfW = max((geo.size.width - 2 * pad - 1) / 2, numW + 2 * gap + textW)
+                    // unifiedRow() lays out num, num, marker, code, Spacer: 4 gaps.
+                    let width = model.settings.diffView == .unified
+                        ? max(geo.size.width, 2 * pad + 2 * numW + markerW + 4 * gap + textW)
+                        : 2 * pad + 2 * halfW + 1
                     ScrollView([.vertical, .horizontal]) {
                         LazyVStack(alignment: .leading, spacing: 0) {
                             ForEach(Array(hunks.enumerated()), id: \.offset) { _, hunk in
@@ -33,9 +39,9 @@ struct DiffView: View {
                                 } else {
                                     ForEach(Array(hunk.sideBySideRows.enumerated()), id: \.offset) { _, row in
                                         HStack(spacing: 0) {
-                                            half(row.left, number: row.left?.oldNumber)
+                                            half(row.left, number: row.left?.oldNumber, width: halfW)
                                             Divider()
-                                            half(row.right, number: row.right?.newNumber)
+                                            half(row.right, number: row.right?.newNumber, width: halfW)
                                         }
                                     }
                                 }
@@ -52,17 +58,14 @@ struct DiffView: View {
         .background(Color(t.background))
     }
 
-    /// Every row is as wide as the viewport or the longest line, whichever is larger.
-    private func contentWidth(_ hunks: [Hunk], _ font: NSFont, viewport: CGFloat) -> CGFloat {
+    /// Width of the longest line on either side, as rendered (tabs expanded).
+    private func textWidth(_ hunks: [Hunk], _ font: NSFont) -> CGFloat {
         let advance = ("M" as NSString).size(withAttributes: [.font: font]).width
-        let chars = CGFloat(hunks.flatMap(\.lines).map { $0.text.count }.max() ?? 0)
-        let text = chars * advance
-        if model.settings.diffView == .unified {
-            return max(viewport, 2 * pad + 2 * numW + markerW + 3 * gap + text)
-        }
-        let half = max((viewport - 2 * pad - 1) / 2, numW + gap + text)
-        return 2 * pad + 2 * half + 1
+        return CGFloat(hunks.flatMap(\.lines).map { expandTabs($0.text).count }.max() ?? 0) * advance
     }
+
+    /// One tab = 4 spaces, for both measuring and rendering, so widths agree.
+    private func expandTabs(_ text: String) -> String { text.replacingOccurrences(of: "\t", with: "    ") }
 
     private func placeholder(_ s: String) -> some View {
         Text(s).foregroundStyle(Color(model.theme.lineNumber)).frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -80,13 +83,14 @@ struct DiffView: View {
         .background(Color(bg(line.kind)))
     }
 
-    private func half(_ line: DiffLine?, number: Int?) -> some View {
+    private func half(_ line: DiffLine?, number: Int?, width: CGFloat) -> some View {
         HStack(spacing: gap) {
             num(number)
             if let line { code(line.text) } else { Text("") }
             Spacer(minLength: 0)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(width: width, alignment: .leading)
+        .clipped()
         .background(Color(line.map { bg($0.kind) } ?? RGBA(r: 0, g: 0, b: 0, a: 0)))
     }
 
@@ -96,7 +100,7 @@ struct DiffView: View {
     }
 
     private func code(_ text: String) -> some View {
-        codeText(text).lineLimit(1).fixedSize(horizontal: true, vertical: false)
+        codeText(expandTabs(text)).lineLimit(1).fixedSize(horizontal: true, vertical: false)
     }
 
     private func codeText(_ text: String) -> Text {
