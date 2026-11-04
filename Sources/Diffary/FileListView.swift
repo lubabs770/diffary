@@ -19,7 +19,7 @@ struct FileListView: View {
                     Text("No changes vs \(model.settings.baseBranch)").foregroundStyle(Color(t.lineNumber)).padding(8)
                 }
                 // Plain rows rather than List: the system selection highlight ignores the theme.
-                ScrollView {
+                ScrollView(.vertical, showsIndicators: false) {
                     LazyVStack(spacing: 0) {
                         ForEach(files) { file in
                             row(file, t)

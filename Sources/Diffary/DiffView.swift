@@ -32,7 +32,7 @@ struct DiffView: View {
                     let width = model.settings.diffView == .unified
                         ? max(geo.size.width, 2 * pad + 2 * numW + markerW + 4 * gap + textW)
                         : 2 * pad + 2 * halfW + 1
-                    ScrollView([.vertical, .horizontal]) {
+                    ScrollView([.vertical, .horizontal], showsIndicators: false) {
                         LazyVStack(alignment: .leading, spacing: 0) {
                             ForEach(Array(hunks.enumerated()), id: \.offset) { _, hunk in
                                 Text(hunk.header).foregroundStyle(Color(t.hunkHeader)).padding(.vertical, 2)
