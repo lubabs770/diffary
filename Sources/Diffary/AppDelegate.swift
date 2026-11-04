@@ -1,4 +1,5 @@
 import AppKit
+import Combine
 import DiffaryCore
 import SwiftUI
 
@@ -7,6 +8,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     var window: NSWindow?
     var terminal: TerminalView?
     var model: AppModel?
+    private var titlebarSub: AnyCancellable?
 
     init(launch: Launch) { self.launch = launch }
 
@@ -22,12 +24,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let model = AppModel(launch: launch)
         self.model = model
         window.contentView = NSHostingView(rootView: LayoutView(model: model, terminal: terminal))
+        // Follow appearance.titlebar live (config reload).
+        titlebarSub = model.$settings.map(\.titlebar).removeDuplicates()
+            .sink { [weak window] show in window.map { Self.setTitlebar($0, visible: show) } }
         window.center()
         window.makeKeyAndOrderFront(nil)
         window.makeFirstResponder(terminal)
         self.window = window
         // No NSApp.activate(): `open` activates on a normal launch, and
         // `open -g` (scripts, screenshots) must leave focus alone.
+    }
+
+    /// Hidden = no title strip; traffic lights float over the content.
+    static func setTitlebar(_ window: NSWindow, visible: Bool) {
+        if visible { window.styleMask.remove(.fullSizeContentView) } else { window.styleMask.insert(.fullSizeContentView) }
+        window.titlebarAppearsTransparent = !visible
+        window.titleVisibility = visible ? .visible : .hidden
     }
 
     func windowShouldClose(_ sender: NSWindow) -> Bool { terminal?.confirmClose() ?? true }

@@ -86,3 +86,16 @@ import Testing
                 == "/h/.config/diffary/config.toml")
     }
 }
+
+@Suite struct AppearanceDefaultsTests {
+    @Test func defaultsMatchTerminalAndHideTitlebar() {
+        #expect(Settings().theme == "ghostty")
+        #expect(Settings().titlebar == false)
+    }
+
+    @Test func titlebarCanBeTurnedOn() {
+        let load = SettingsLoader.load(file: URL(fileURLWithPath: "/nonexistent"), overrides: ["appearance.titlebar": "true"])
+        #expect(load.settings.titlebar)
+        #expect(load.warnings.isEmpty)
+    }
+}

@@ -4,9 +4,9 @@ A Ghostty terminal with a live sidebar of what your branch changed vs its base.
 
 ![unified diff](docs/screenshots/diff-unified.png)
 
-| side-by-side | dark theme | sidebar at bottom |
+| side-by-side | light theme | sidebar at bottom |
 |---|---|---|
-| ![](docs/screenshots/diff-side-by-side.png) | ![](docs/screenshots/diff-dark.png) | ![](docs/screenshots/sidebar-bottom.png) |
+| ![](docs/screenshots/diff-side-by-side.png) | ![](docs/screenshots/diff-light.png) | ![](docs/screenshots/sidebar-bottom.png) |
 
 Regenerate: `scripts/screenshot.sh docs/screenshots/<name>.png [diffary flags]`
 
@@ -48,7 +48,8 @@ syntax_highlight = true
 [appearance]
 font = "JetBrains Mono"       # falls back to system monospace if missing
 font_size = 13
-theme = "auto"                # auto | light | dark | <user theme name>
+theme = "ghostty"             # ghostty (match the terminal) | auto | light | dark | <user theme name>
+titlebar = false              # true shows the window title bar
 ```
 
 See `docs/superpowers/specs/2026-11-04-diffary-design.md` for every key and the theme format.

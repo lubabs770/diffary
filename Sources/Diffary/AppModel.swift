@@ -49,7 +49,8 @@ final class AppModel: ObservableObject {
     func reloadSettings() {
         let load = SettingsLoader.load(file: launch.configFile, overrides: launch.overrides)
         let isDark = NSApp.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
-        let resolved = ThemeLoader.resolve(name: load.settings.theme, systemIsDark: isDark, themesDir: themesDir)
+        let resolved = ThemeLoader.resolve(name: load.settings.theme, systemIsDark: isDark, themesDir: themesDir,
+                                           terminal: GhosttyRuntime.shared.terminalColors)
         let baseChanged = load.settings.baseBranch != settings.baseBranch
         let diffChanged = load.settings.diffOptions != settings.diffOptions
         // Only publish real changes: every config-dir event lands here.

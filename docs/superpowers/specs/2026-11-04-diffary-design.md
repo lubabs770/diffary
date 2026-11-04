@@ -73,7 +73,8 @@ syntax_highlight = true
 [appearance]
 font = "JetBrains Mono"       # falls back to system monospace if missing
 font_size = 13
-theme = "auto"                # auto | light | dark | <user theme name>
+theme = "ghostty"             # ghostty (match the terminal) | auto | light | dark | <user theme name>
+titlebar = false              # true shows the window title bar
 ```
 
 Invalid values fall back to the default for that key and show one warning line
@@ -85,7 +86,9 @@ as usual.
 
 ## Themes
 
-Built-in: `light`, `dark`. `auto` follows macOS appearance.
+Built-in: `light`, `dark`. `auto` follows macOS appearance. `ghostty` (default)
+uses the terminal's background, foreground and selection colors from Ghostty's
+config, with diff and syntax colors from `dark` or `light` by background brightness.
 
 User themes: `$XDG_CONFIG_HOME/diffary/themes/<name>.toml`, selected with
 `theme = "<name>"`. Any key missing falls back to the built-in `dark` (or

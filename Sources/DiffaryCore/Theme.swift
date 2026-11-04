@@ -65,10 +65,44 @@ public struct Theme: Sendable, Equatable {
                  "number": c("#0550ae"), "type": c("#953800")])
 }
 
+/// The embedded terminal's own colors (from Ghostty's config).
+public struct TerminalColors: Sendable, Equatable {
+    public var background, foreground: RGBA
+    public var selection: RGBA?
+    public init(background: RGBA, foreground: RGBA, selection: RGBA?) {
+        self.background = background; self.foreground = foreground; self.selection = selection
+    }
+}
+
+extension RGBA {
+    /// Relative luminance, 0 (black) … 1 (white).
+    var luminance: Double { 0.2126 * r + 0.7152 * g + 0.0722 * b }
+
+    /// `self` moved `t` of the way toward `other`.
+    func mixed(with other: RGBA, _ t: Double) -> RGBA {
+        RGBA(r: r + (other.r - r) * t, g: g + (other.g - g) * t, b: b + (other.b - b) * t, a: 1)
+    }
+}
+
+extension Theme {
+    /// Panels in the terminal's colors; diff and syntax colors from the matching built-in.
+    public static func matching(_ t: TerminalColors) -> Theme {
+        var theme = t.background.luminance < 0.5 ? Theme.dark : Theme.light
+        theme.background = t.background
+        theme.sidebarBackground = t.background
+        theme.foreground = t.foreground
+        theme.selection = t.selection ?? t.background.mixed(with: t.foreground, 0.2)
+        theme.lineNumber = t.background.mixed(with: t.foreground, 0.45)
+        return theme
+    }
+}
+
 public enum ThemeLoader {
-    public static func resolve(name: String, systemIsDark: Bool, themesDir: URL) -> (theme: Theme, warnings: [String]) {
+    public static func resolve(name: String, systemIsDark: Bool, themesDir: URL,
+                               terminal: TerminalColors? = nil) -> (theme: Theme, warnings: [String]) {
         let auto = systemIsDark ? Theme.dark : Theme.light
         switch name {
+        case "ghostty": return (terminal.map(Theme.matching) ?? auto, [])
         case "auto": return (auto, [])
         case "dark": return (.dark, [])
         case "light": return (.light, [])

@@ -18,7 +18,8 @@ public struct Settings: Sendable, Equatable {
     public var syntaxHighlight = true
     public var font = "JetBrains Mono"
     public var fontSize = 13.0
-    public var theme = "auto"
+    public var theme = "ghostty"
+    public var titlebar = false
     public init() {}
 
     public var diffOptions: DiffOptions {
@@ -100,6 +101,7 @@ public enum SettingsLoader {
         "appearance.font": { s, v in guard !v.isEmpty else { return false }; s.font = v; return true },
         "appearance.font_size": { s, v in set(&s.fontSize, Double(v).flatMap { (6...72).contains($0) ? $0 : nil }) },
         "appearance.theme": { s, v in guard !v.isEmpty else { return false }; s.theme = v; return true },
+        "appearance.titlebar": { s, v in set(&s.titlebar, Bool(v)) },
     ]
 
     private static func set<T>(_ target: inout T, _ value: T?) -> Bool {

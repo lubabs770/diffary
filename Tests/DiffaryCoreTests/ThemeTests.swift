@@ -54,3 +54,33 @@ import Testing
         #expect(warnings.count == 2)
     }
 }
+
+@Suite struct TerminalThemeTests {
+    let dir = FileManager.default.temporaryDirectory
+
+    @Test func ghosttyThemeUsesTerminalColorsOnDarkBase() {
+        let term = TerminalColors(background: RGBA(hex: "#1e1e2e")!, foreground: RGBA(hex: "#cdd6f4")!,
+                                  selection: RGBA(hex: "#313244")!)
+        let (theme, warnings) = ThemeLoader.resolve(name: "ghostty", systemIsDark: false, themesDir: dir, terminal: term)
+        #expect(warnings.isEmpty)
+        #expect(theme.isDark)
+        #expect(theme.background == term.background)
+        #expect(theme.foreground == term.foreground)
+        #expect(theme.selection == term.selection)
+        #expect(theme.sidebarBackground == term.background)
+        #expect(theme.addedFg == Theme.dark.addedFg)
+        #expect(theme.syntax == Theme.dark.syntax)
+    }
+
+    @Test func lightTerminalPicksLightBaseAndDerivesSelection() {
+        let term = TerminalColors(background: RGBA(hex: "#ffffff")!, foreground: RGBA(hex: "#000000")!, selection: nil)
+        let theme = ThemeLoader.resolve(name: "ghostty", systemIsDark: true, themesDir: dir, terminal: term).theme
+        #expect(!theme.isDark)
+        #expect(theme.addedFg == Theme.light.addedFg)
+        #expect(theme.selection != term.background)
+    }
+
+    @Test func ghosttyWithoutTerminalColorsFallsBackToAuto() {
+        #expect(ThemeLoader.resolve(name: "ghostty", systemIsDark: true, themesDir: dir, terminal: nil).theme == .dark)
+    }
+}

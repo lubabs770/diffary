@@ -1,4 +1,5 @@
 import AppKit
+import DiffaryCore
 import GhosttyKit
 
 /// Owns the one ghostty_app_t. Terminal fonts, colors and keys come from
@@ -8,6 +9,8 @@ final class GhosttyRuntime {
     static let shared = GhosttyRuntime()
     private(set) var app: ghostty_app_t?
     private(set) var error: String?
+    /// Kept for reading values back (colors); never freed, lives as long as the app.
+    private var config: ghostty_config_t?
 
     private init() {
         // ghostty_init may keep argv, so pass the process's own (lives forever).
@@ -18,6 +21,7 @@ final class GhosttyRuntime {
         ghostty_config_load_default_files(config)
         ghostty_config_load_recursive_files(config)
         ghostty_config_finalize(config)
+        self.config = config
 
         var runtime = ghostty_runtime_config_s(
             userdata: nil,
@@ -53,6 +57,19 @@ final class GhosttyRuntime {
         guard let app = ghostty_app_new(&runtime, config) else { error = "ghostty_app_new failed"; return }
         self.app = app
         ghostty_app_set_focus(app, NSApp.isActive)
+    }
+
+    /// The terminal's background/foreground/selection from Ghostty's config.
+    var terminalColors: TerminalColors? {
+        guard let bg = color("background"), let fg = color("foreground") else { return nil }
+        return TerminalColors(background: bg, foreground: fg, selection: color("selection-background"))
+    }
+
+    private func color(_ key: String) -> RGBA? {
+        guard let config else { return nil }
+        var c = ghostty_config_color_s()
+        guard ghostty_config_get(config, &c, key, UInt(key.utf8.count)) else { return nil }
+        return RGBA(r: Double(c.r) / 255, g: Double(c.g) / 255, b: Double(c.b) / 255, a: 1)
     }
 
     func tick() {
