@@ -78,23 +78,21 @@ final class TerminalView: NSView {
     /// Let Ghostty see Cmd-shortcuts (copy/paste/etc. come from its keybinds).
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
         guard window?.firstResponder === self, event.modifierFlags.contains(.command) else { return false }
-        keyDown(with: event)
-        return true
+        // Only claim keys Ghostty consumed, so unbound Cmd keys reach AppKit.
+        return sendKey(event, event.isARepeat ? GHOSTTY_ACTION_REPEAT : GHOSTTY_ACTION_PRESS)
     }
 
     // ponytail: no IME/dead-key composition (interpretKeyEvents path). Port
     // keyDown + NSTextInputClient from SurfaceView_AppKit.swift if needed.
-    private func sendKey(_ event: NSEvent, _ action: ghostty_input_action_e) {
-        guard let surface else { return }
+    @discardableResult
+    private func sendKey(_ event: NSEvent, _ action: ghostty_input_action_e) -> Bool {
+        guard let surface else { return false }
         var key = keyEvent(event, action)
         let text = action == GHOSTTY_ACTION_RELEASE ? nil : Self.ghosttyText(event)
-        if let text {
-            text.withCString { ptr in
-                key.text = ptr
-                _ = ghostty_surface_key(surface, key)
-            }
-        } else {
-            _ = ghostty_surface_key(surface, key)
+        guard let text else { return ghostty_surface_key(surface, key) }
+        return text.withCString { ptr in
+            key.text = ptr
+            return ghostty_surface_key(surface, key)
         }
     }
 
@@ -186,11 +184,13 @@ final class TerminalView: NSView {
         return GHOSTTY_CLIPBOARD_READ_STARTED
     }
 
-    /// Ghostty asks this before an unsafe paste (e.g. contains newlines).
-    /// Keep its paste protection: ask the user.
+    /// Ghostty asks this before an unsafe paste (e.g. contains newlines) or a
+    /// program's clipboard read (OSC 52 / kitty). Keep that protection: ask.
     static func confirmReadClipboard(_ userdata: UnsafeMutableRawPointer?,
                                      confirm: UnsafePointer<ghostty_clipboard_confirm_s>,
-                                     state: UnsafeMutableRawPointer) {
+                                     state: UnsafeMutableRawPointer,
+                                     request: ghostty_clipboard_request_e) {
+        // No view/surface means nothing to complete or deny against.
         guard let userdata else { return }
         let view = Unmanaged<TerminalView>.fromOpaque(userdata).takeUnretainedValue()
         guard let surface = view.surface else { return }
@@ -201,19 +201,37 @@ final class TerminalView: NSView {
                 text = String(decoding: Data(bytes: contents[i].data, count: contents[i].len), as: UTF8.self)
             }
         }
+        let title: String, ok: String
+        switch request {
+        case GHOSTTY_CLIPBOARD_REQUEST_PASTE:
+            (title, ok) = ("Paste into terminal?", "Paste")
+        case GHOSTTY_CLIPBOARD_REQUEST_OSC_52_READ, GHOSTTY_CLIPBOARD_REQUEST_KITTY_READ:
+            let who = c.name.map { " (\(String(cString: $0)))" } ?? ""
+            (title, ok) = ("A program\(who) wants to read your clipboard", "Allow")
+        default:
+            ghostty_surface_deny_clipboard_request(surface, state); return
+        }
         guard let text else { ghostty_surface_deny_clipboard_request(surface, state); return }
         DispatchQueue.main.async {
-            let alert = NSAlert()
-            alert.messageText = "Paste into terminal?"
-            alert.informativeText = String(text.prefix(500))
-            alert.addButton(withTitle: "Paste")
-            alert.addButton(withTitle: "Cancel")
-            if alert.runModal() == .alertFirstButtonReturn {
+            let allowed = ask(title, String(text.prefix(500)), ok: ok)
+            // The surface may have closed while the alert was up.
+            guard let surface = view.surface else { return }
+            if allowed {
                 complete(surface, state: state, text: text, confirmed: true)
             } else {
                 ghostty_surface_deny_clipboard_request(surface, state)
             }
         }
+    }
+
+    /// Modal yes/no. Main thread only.
+    static func ask(_ title: String, _ detail: String, ok: String) -> Bool {
+        let alert = NSAlert()
+        alert.messageText = title
+        alert.informativeText = detail
+        alert.addButton(withTitle: ok)
+        alert.addButton(withTitle: "Cancel")
+        return alert.runModal() == .alertFirstButtonReturn
     }
 
     private static func complete(_ surface: ghostty_surface_t, state: UnsafeMutableRawPointer, text: String, confirmed: Bool) {

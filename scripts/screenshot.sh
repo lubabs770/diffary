@@ -19,7 +19,11 @@ printf 'import Foundation\n\n/// Greets someone politely.\nfunc greet(_ name: St
 git rm -q legacy.txt && git commit -qam "feat work"
 printf 'func farewell() -> String { "Bye" }\n' > src/farewell.swift
 
-open -g -n -a "$APP" --args "$demo" "$@"
+# Neutral prompt: no hostname or temp path in screenshots. (zsh only.)
+zdot=$(dirname "$demo")/zdot
+mkdir -p "$zdot" && printf "PROMPT='%%F{blue}demo%%f %%F{yellow}feat%%f \$ '\n" > "$zdot/.zshrc"
+
+open -g -n -a "$APP" --env ZDOTDIR="$zdot" --args "$demo" "$@"
 sleep 3
 pid=$(pgrep -n -x Diffary)
 id=$(swift "$here/window-id.swift" "$pid")
