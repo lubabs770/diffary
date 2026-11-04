@@ -11,6 +11,7 @@ mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
 cp "$bin/Diffary" "$app/Contents/MacOS/Diffary"
 # SwiftPM resource bundles (e.g. Highlightr's) sit next to the binary.
 for b in "$bin"/*.bundle; do [[ -e $b ]] && cp -R "$b" "$app/Contents/Resources/"; done
+cp assets/AppIcon.icns "$app/Contents/Resources/AppIcon.icns"
 cat > "$app/Contents/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -18,6 +19,7 @@ cat > "$app/Contents/Info.plist" <<'PLIST'
   <key>CFBundleName</key><string>Diffary</string>
   <key>CFBundleIdentifier</key><string>io.github.lubabs770.diffary</string>
   <key>CFBundleExecutable</key><string>Diffary</string>
+  <key>CFBundleIconFile</key><string>AppIcon</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleShortVersionString</key><string>0.1.0</string>
   <key>LSMinimumSystemVersion</key><string>14.0</string>

@@ -1,4 +1,8 @@
-# diffary
+<p align="center"><img src="assets/logo.svg" width="96" alt=""></p>
+
+<h1 align="center">diffary</h1>
+
+<p align="center">a terminal that knows what your branch changed</p>
 
 A Ghostty terminal with a live sidebar of what your branch changed vs its base.
 
@@ -55,6 +59,10 @@ titlebar = false              # true shows the window title bar
 See `docs/superpowers/specs/2026-11-04-diffary-design.md` for every key and the theme format.
 Themes: `~/.config/diffary/themes/<name>.toml`, selected with `[appearance] theme = "<name>"`.
 Terminal settings come from Ghostty's own config.
+
+## Icon
+
+`assets/icon.svg` is the app icon (`icon-small.svg` for 16–32px). After editing either, run `scripts/make-icon.sh` to rebuild the committed `assets/AppIcon.icns`.
 
 ## Bumping Ghostty
 

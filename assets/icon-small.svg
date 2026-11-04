@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- Small-size variant (16–32px): no cursor or grey bar, heavier strokes. -->
+  <svg x="100" y="100" width="824" height="824" viewBox="0 0 100 100">
+    <rect width="100" height="100" rx="22" fill="#1e2327"/>
+    <rect x="0.75" y="0.75" width="98.5" height="98.5" rx="21.5" fill="none" stroke="#3a424a" stroke-width="1.5"/>
+    <path d="M18 38 L30 50 L18 62" stroke="#e6edf3" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="58" y="14" width="30" height="72" rx="7" fill="#2b3239"/>
+    <rect x="63" y="25" width="20" height="8" rx="3" fill="#3fb950"/>
+    <rect x="63" y="43" width="13" height="8" rx="3" fill="#f85149"/>
+    <rect x="63" y="61" width="17" height="8" rx="3" fill="#3fb950"/>
+  </svg>
+</svg>
