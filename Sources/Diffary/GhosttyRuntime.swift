@@ -46,6 +46,7 @@ final class GhosttyRuntime {
                 DispatchQueue.main.async {
                     if processAlive, !TerminalView.ask("A process is still running. Close?",
                                                        "Closing ends it.", ok: "Close") { return }
+                    view.closeConfirmed = true  // the quit that follows mustn't ask again
                     view.window?.close()
                 }
             })

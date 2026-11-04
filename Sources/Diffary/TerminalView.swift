@@ -5,6 +5,16 @@ import GhosttyKit
 final class TerminalView: NSView {
     private(set) var surface: ghostty_surface_t?
     private(set) var startupError: String?
+    /// Set once the user has OK'd ending the shell, so close and quit don't ask twice.
+    var closeConfirmed = false
+
+    /// Asks before ending a running process. True when it's fine to close.
+    func confirmClose() -> Bool {
+        if closeConfirmed { return true }
+        guard let surface, ghostty_surface_needs_confirm_quit(surface) else { return true }
+        closeConfirmed = Self.ask("A process is still running. Close?", "Closing ends it.", ok: "Close")
+        return closeConfirmed
+    }
 
     init(workingDirectory: URL) {
         super.init(frame: NSRect(x: 0, y: 0, width: 800, height: 600))
