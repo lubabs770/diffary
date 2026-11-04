@@ -34,12 +34,15 @@ struct DiffView: View {
                         : 2 * pad + 2 * halfW + 1
                     ScrollView([.vertical, .horizontal], showsIndicators: false) {
                         LazyVStack(alignment: .leading, spacing: 0) {
-                            ForEach(Array(hunks.enumerated()), id: \.offset) { _, hunk in
+                            // Row ids must be unique across ALL hunks: a lazy stack draws
+                            // only the first of any repeated id, leaving later hunks blank.
+                            ForEach(Array(hunks.enumerated()), id: \.offset) { hi, hunk in
                                 Text(hunk.header).foregroundStyle(Color(t.hunkHeader)).padding(.vertical, 2)
                                 if model.settings.diffView == .unified {
-                                    ForEach(Array(hunk.lines.enumerated()), id: \.offset) { _, line in unifiedRow(line) }
+                                    ForEach(keyed(hunk.lines, hunk: hi), id: \.id) { item in unifiedRow(item.value) }
                                 } else {
-                                    ForEach(Array(hunk.sideBySideRows.enumerated()), id: \.offset) { _, row in
+                                    ForEach(keyed(hunk.sideBySideRows, hunk: hi), id: \.id) { item in
+                                        let row = item.value
                                         HStack(spacing: 0) {
                                             half(row.left, number: row.left?.oldNumber, width: halfW)
                                             Divider()
@@ -68,6 +71,11 @@ struct DiffView: View {
 
     /// One tab = 4 spaces, for both measuring and rendering, so widths agree.
     private func expandTabs(_ text: String) -> String { text.replacingOccurrences(of: "\t", with: "    ") }
+
+    /// Pairs each element with an id unique across hunks ("hunk-index").
+    private func keyed<T>(_ items: [T], hunk: Int) -> [(id: String, value: T)] {
+        items.enumerated().map { ("\(hunk)-\($0.offset)", $0.element) }
+    }
 
     private func placeholder(_ s: String) -> some View {
         Text(s).foregroundStyle(Color(model.theme.lineNumber)).frame(maxWidth: .infinity, maxHeight: .infinity)

@@ -41,7 +41,7 @@ struct FileListView: View {
         HStack(spacing: 6) {
             Text(f.status == .untracked ? "A" : f.status.rawValue)
                 .foregroundStyle(Color(color(f.status, t))).frame(width: 14)
-            Text(f.oldPath.map { "\($0) → \(f.path)" } ?? f.path).lineLimit(1).truncationMode(.middle)
+            Text(f.oldPath.map { "\($0) → \(f.path)" } ?? f.path).lineLimit(1).truncationMode(.head)  // keep the file name visible
             Spacer()
             if let a = f.additions, a > 0 { Text("+\(a)").foregroundStyle(Color(t.addedFg)) }
             if let d = f.deletions, d > 0 { Text("-\(d)").foregroundStyle(Color(t.removedFg)) }
