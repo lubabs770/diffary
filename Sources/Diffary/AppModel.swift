@@ -28,14 +28,16 @@ final class AppModel: ObservableObject {
             DispatchQueue.main.async { self?.refresh() }
         }
         repoWatcher?.start()
-        // Watch the config dir, not the file: editors save by replacing it.
-        let configDir = launch.configFile.deletingLastPathComponent()
-        if FileManager.default.fileExists(atPath: configDir.path) {
-            configWatcher = FileWatcher(paths: [configDir], debounce: 0.1) { [weak self] in
-                DispatchQueue.main.async { self?.reloadSettings() }
-            }
-            configWatcher?.start()
+        // Watch the config dir, not the file: editors save by replacing it. If it
+        // doesn't exist yet (fresh install), watch its nearest existing ancestor.
+        var watched = launch.configFile.deletingLastPathComponent()
+        while !FileManager.default.fileExists(atPath: watched.path), watched.path != "/" {
+            watched = watched.deletingLastPathComponent()
         }
+        configWatcher = FileWatcher(paths: [watched], debounce: 0.1) { [weak self] in
+            DispatchQueue.main.async { self?.reloadSettings() }
+        }
+        configWatcher?.start()
         appearanceObserver = NSApp.observe(\.effectiveAppearance) { [weak self] _, _ in
             DispatchQueue.main.async { self?.reloadSettings() }
         }
@@ -68,7 +70,7 @@ final class AppModel: ObservableObject {
                         self.loadDiff()
                     }
                 case .failure(let error):
-                    self.changes = nil
+                    // Keep the last good list; just surface the error.
                     self.gitError = "\(error)"
                 }
             }
@@ -88,7 +90,7 @@ final class AppModel: ObservableObject {
             DispatchQueue.main.async {
                 guard self.selected == file else { return }  // selection moved on
                 switch result {
-                case .success(let d): self.diff = d
+                case .success(let d): self.diff = d; self.gitError = nil
                 case .failure(let e): self.diff = nil; self.gitError = "\(e)"
                 }
             }
