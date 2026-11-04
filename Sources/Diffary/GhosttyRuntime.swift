@@ -14,15 +14,15 @@ final class GhosttyRuntime {
     /// PostScript name of the terminal's font, set once the first surface exists.
     var terminalFontName: String?
 
+    private var configWatcher: FileWatcher?
+
     private init() {
+        Self.useGhosttyAppResources()
         // ghostty_init may keep argv, so pass the process's own (lives forever).
         // argc 1: only the program name, so diffary's own flags aren't parsed
         // as Ghostty CLI actions.
         guard ghostty_init(1, CommandLine.unsafeArgv) == GHOSTTY_SUCCESS else { error = "ghostty_init failed"; return }
-        guard let config = ghostty_config_new() else { error = "ghostty_config_new failed"; return }
-        ghostty_config_load_default_files(config)
-        ghostty_config_load_recursive_files(config)
-        ghostty_config_finalize(config)
+        guard let config = Self.loadConfig() else { error = "ghostty_config_new failed"; return }
         self.config = config
 
         var runtime = ghostty_runtime_config_s(
@@ -32,10 +32,18 @@ final class GhosttyRuntime {
                 DispatchQueue.main.async { MainActor.assumeIsolated { GhosttyRuntime.shared.tick() } }
             },
             action_cb: { _, _, action in
-                // Tabs/splits/titles: not ours. Quit (Cmd-Q keybind) is.
-                guard action.tag == GHOSTTY_ACTION_QUIT else { return false }
-                DispatchQueue.main.async { NSApp.terminate(nil) }
-                return true
+                // Tabs/splits/titles: not ours. Quit and config reload are.
+                switch action.tag {
+                case GHOSTTY_ACTION_QUIT:
+                    DispatchQueue.main.async { NSApp.terminate(nil) }
+                    return true
+                case GHOSTTY_ACTION_RELOAD_CONFIG:
+                    let soft = action.action.reload_config.soft
+                    DispatchQueue.main.async { MainActor.assumeIsolated { GhosttyRuntime.shared.reloadConfig(soft: soft) } }
+                    return true
+                default:
+                    return false
+                }
             },
             read_clipboard_cb: { userdata, _, state, mimes, count, _ in
                 TerminalView.readClipboard(userdata, state: state, mimes: mimes, count: count)
@@ -59,6 +67,62 @@ final class GhosttyRuntime {
         guard let app = ghostty_app_new(&runtime, config) else { error = "ghostty_app_new failed"; return }
         self.app = app
         ghostty_app_set_focus(app, NSApp.isActive)
+
+        // Ghostty itself only reloads on its keybind; diffary also reloads when
+        // the config files are saved, since that keypress never reaches us.
+        let dirs = Self.configDirs().filter { FileManager.default.fileExists(atPath: $0.path) }
+        if !dirs.isEmpty {
+            configWatcher = FileWatcher(paths: dirs, debounce: 0.3) {
+                DispatchQueue.main.async { MainActor.assumeIsolated { GhosttyRuntime.shared.reloadConfig() } }
+            }
+            configWatcher?.start()
+        }
+    }
+
+    static let configReloaded = Notification.Name("diffary.ghosttyConfigReloaded")
+
+    /// Re-read Ghostty's config into the running terminal, then tell diffary's
+    /// panels (colors, font) to follow.
+    func reloadConfig(soft: Bool = false) {
+        guard let app else { return }
+        if !soft, let fresh = Self.loadConfig() {
+            // ponytail: the previous config is leaked, not freed; reloads are rare
+            // and Ghostty may still reference it during the swap.
+            config = fresh
+        }
+        guard let config else { return }
+        ghostty_app_update_config(app, config)
+        // Surfaces apply the new font a beat later; read it back after that.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            NotificationCenter.default.post(name: Self.configReloaded, object: nil)
+        }
+    }
+
+    private static func loadConfig() -> ghostty_config_t? {
+        guard let config = ghostty_config_new() else { return nil }
+        ghostty_config_load_default_files(config)
+        ghostty_config_load_recursive_files(config)
+        ghostty_config_finalize(config)
+        return config
+    }
+
+    /// Where Ghostty reads its config on macOS.
+    private static func configDirs() -> [URL] {
+        let env = ProcessInfo.processInfo.environment
+        let xdg = env["XDG_CONFIG_HOME"].flatMap { $0.isEmpty ? nil : $0 } ?? NSHomeDirectory() + "/.config"
+        return [URL(fileURLWithPath: xdg).appendingPathComponent("ghostty"),
+                URL(fileURLWithPath: NSHomeDirectory())
+                    .appendingPathComponent("Library/Application Support/com.mitchellh.ghostty")]
+    }
+
+    /// Built-in themes (`theme = TokyoNight`) and shell integration live in
+    /// Ghostty.app's resources; point libghostty at them unless the user did.
+    private static func useGhosttyAppResources() {
+        guard ProcessInfo.processInfo.environment["GHOSTTY_RESOURCES_DIR"] == nil,
+              let app = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.mitchellh.ghostty")
+        else { return }
+        let dir = app.appendingPathComponent("Contents/Resources/ghostty")
+        if FileManager.default.fileExists(atPath: dir.path) { setenv("GHOSTTY_RESOURCES_DIR", dir.path, 1) }
     }
 
     /// The terminal's background/foreground/selection from Ghostty's config.

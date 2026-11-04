@@ -17,6 +17,9 @@ final class AppModel: ObservableObject {
     /// Sidebar share from dragging the border; nil = layout.sidebar_size.
     /// Cleared when that config value changes.
     @Published var draggedSidebarShare: Double?
+    /// Bumped when Ghostty's config reloads, so views re-read the terminal font.
+    @Published private(set) var terminalStyleVersion = 0
+    private var ghosttyReloadObserver: NSObjectProtocol?
 
     private var repoWatcher: FileWatcher?
     private var configWatcher: FileWatcher?
@@ -44,6 +47,13 @@ final class AppModel: ObservableObject {
             DispatchQueue.main.async { self?.reloadSettings() }
         }
         configWatcher?.start()
+        ghosttyReloadObserver = NotificationCenter.default.addObserver(
+            forName: GhosttyRuntime.configReloaded, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.terminalStyleVersion += 1
+                self?.reloadSettings()
+            }
+        }
         appearanceObserver = NSApp.observe(\.effectiveAppearance) { [weak self] _, _ in
             DispatchQueue.main.async { self?.reloadSettings() }
         }
