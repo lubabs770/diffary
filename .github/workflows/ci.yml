@@ -13,4 +13,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: scripts/fetch-ghosttykit.sh
       - run: swift build
-      - run: swift test --no-parallel
+      - run: swift test

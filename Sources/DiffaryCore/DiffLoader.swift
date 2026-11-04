@@ -15,7 +15,7 @@ public struct DiffLoader: Sendable {
     public init(repo: URL) { git = Git(repo: repo) }
 
     public func load(_ change: FileChange, base: String, options: DiffOptions) throws -> FileDiff {
-        var args = ["diff", "--no-color", "--no-ext-diff", "-U\(options.contextLines)"]
+        var args = ["diff", "--no-color", "--no-ext-diff", "--no-textconv", "-U\(options.contextLines)"]
         if options.ignoreWhitespace { args.append("-w") }
         if change.status == .untracked {
             // --no-index exits 1 when the files differ.
