@@ -25,15 +25,11 @@ public final class FileWatcher: @unchecked Sendable {
         var context = FSEventStreamContext(
             version: 0, info: Unmanaged.passUnretained(self).toOpaque(),
             retain: nil, release: nil, copyDescription: nil)
-        let callback: FSEventStreamCallback = { _, info, count, eventPaths, eventFlags, _ in
+        let callback: FSEventStreamCallback = { _, info, count, eventPaths, _, _ in
             guard let info else { return }
             let watcher = Unmanaged<FileWatcher>.fromOpaque(info).takeUnretainedValue()
             let paths = unsafeBitCast(eventPaths, to: NSArray.self) as? [String] ?? []
-            // Directory-item events are metadata noise (e.g. xattrs on dirs created just before start).
-            let files = (0..<min(count, paths.count)).filter {
-                eventFlags[$0] & UInt32(kFSEventStreamEventFlagItemIsDir) == 0
-            }.map { paths[$0] }
-            watcher.handle(files)
+            watcher.handle(Array(paths.prefix(count)))
         }
         let flags = UInt32(kFSEventStreamCreateFlagUseCFTypes | kFSEventStreamCreateFlagFileEvents
                            | kFSEventStreamCreateFlagNoDefer)
