@@ -1,0 +1,4 @@
+.build/
+Frameworks/
+dist/
+.swiftpm/
