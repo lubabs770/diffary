@@ -43,7 +43,7 @@ struct FileListView: View {
                 .foregroundStyle(Color(color(f.status, t))).frame(width: 14)
             Text(f.oldPath.map { "\($0) → \(f.path)" } ?? f.path).lineLimit(1).truncationMode(.middle)
             Spacer()
-            if let a = f.additions { Text("+\(a)").foregroundStyle(Color(t.addedFg)) }
+            if let a = f.additions, a > 0 { Text("+\(a)").foregroundStyle(Color(t.addedFg)) }
             if let d = f.deletions, d > 0 { Text("-\(d)").foregroundStyle(Color(t.removedFg)) }
         }
     }

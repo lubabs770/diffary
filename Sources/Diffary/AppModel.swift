@@ -52,9 +52,11 @@ final class AppModel: ObservableObject {
         let resolved = ThemeLoader.resolve(name: load.settings.theme, systemIsDark: isDark, themesDir: themesDir)
         let baseChanged = load.settings.baseBranch != settings.baseBranch
         let diffChanged = load.settings.diffOptions != settings.diffOptions
-        settings = load.settings
-        theme = resolved.theme
-        warnings = load.warnings + resolved.warnings
+        // Only publish real changes: every config-dir event lands here.
+        if settings != load.settings { settings = load.settings }
+        if theme != resolved.theme { theme = resolved.theme }
+        let newWarnings = load.warnings + resolved.warnings
+        if warnings != newWarnings { warnings = newWarnings }
         if baseChanged { refresh() } else if diffChanged { loadDiff() }
     }
 
