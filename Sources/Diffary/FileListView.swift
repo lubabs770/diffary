@@ -19,15 +19,20 @@ struct FileListView: View {
                     Text("No changes vs \(model.settings.baseBranch)").foregroundStyle(Color(t.lineNumber)).padding(8)
                 }
                 // Plain rows rather than List: the system selection highlight ignores the theme.
-                ScrollView(.vertical, showsIndicators: false) {
-                    LazyVStack(spacing: 0) {
-                        ForEach(files) { file in
-                            row(file, t)
-                                .padding(.horizontal, 8).padding(.vertical, 3)
-                                .background(model.selected?.path == file.path ? Color(t.selection) : .clear)
-                                .contentShape(Rectangle())
-                                .onTapGesture { model.select(file) }
+                let scroll = model.settings.longPaths == .scroll
+                GeometryReader { geo in
+                    ScrollView(scroll ? [.vertical, .horizontal] : .vertical, showsIndicators: false) {
+                        LazyVStack(spacing: 0) {
+                            ForEach(files) { file in
+                                row(file, t, scroll: scroll)
+                                    .padding(.horizontal, 8).padding(.vertical, 3)
+                                    .background(model.selected?.path == file.path ? Color(t.selection) : .clear)
+                                    .contentShape(Rectangle())
+                                    .onTapGesture { model.select(file) }
+                            }
                         }
+                        // Scrolling: rows at least as wide as the pane, wider for long paths.
+                        .frame(minWidth: scroll ? geo.size.width : nil, alignment: .leading)
                     }
                 }
             }
@@ -37,11 +42,13 @@ struct FileListView: View {
         .background(Color(t.sidebarBackground))
     }
 
-    private func row(_ f: FileChange, _ t: Theme) -> some View {
+    private func row(_ f: FileChange, _ t: Theme, scroll: Bool) -> some View {
         HStack(spacing: 6) {
             Text(f.status == .untracked ? "A" : f.status.rawValue)
                 .foregroundStyle(Color(color(f.status, t))).frame(width: 14)
-            Text(f.oldPath.map { "\($0) → \(f.path)" } ?? f.path).lineLimit(1).truncationMode(.head)  // keep the file name visible
+            Text(f.oldPath.map { "\($0) → \(f.path)" } ?? f.path).lineLimit(1)
+                .truncationMode(.head)  // keep the file name visible
+                .fixedSize(horizontal: scroll, vertical: false)  // scroll: never truncate
             Spacer()
             if let a = f.additions, a > 0 { Text("+\(a)").foregroundStyle(Color(t.addedFg)) }
             if let d = f.deletions, d > 0 { Text("-\(d)").foregroundStyle(Color(t.removedFg)) }

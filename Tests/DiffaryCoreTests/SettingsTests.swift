@@ -124,3 +124,15 @@ import Testing
         #expect(load.settings.diffView == .sideBySide)
     }
 }
+
+@Suite struct LongPathsTests {
+    @Test func defaultTruncatesAndScrollIsAccepted() {
+        #expect(Settings().longPaths == .truncate)
+        let load = SettingsLoader.load(file: URL(fileURLWithPath: "/nonexistent"), overrides: ["layout.long_paths": "scroll"])
+        #expect(load.settings.longPaths == .scroll)
+        #expect(load.warnings.isEmpty)
+        let bad = SettingsLoader.load(file: URL(fileURLWithPath: "/nonexistent"), overrides: ["layout.long_paths": "wrap"])
+        #expect(bad.settings.longPaths == .truncate)
+        #expect(bad.warnings.count == 1)
+    }
+}

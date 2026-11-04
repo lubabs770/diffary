@@ -2,6 +2,8 @@ import Foundation
 import TOMLKit
 
 public enum SidebarPosition: String, Sendable { case right, left, bottom }
+/// Long paths in the file list: cut from the front, or shown whole with sideways scrolling.
+public enum LongPaths: String, Sendable { case truncate, scroll }
 public enum DiffPosition: String, Sendable {
     case belowList = "below_list", besideList = "beside_list", replaceTerminal = "replace_terminal"
 }
@@ -12,6 +14,7 @@ public struct Settings: Sendable, Equatable {
     public var sidebar = SidebarPosition.right
     public var sidebarSize = 0.35
     public var diffPosition = DiffPosition.belowList
+    public var longPaths = LongPaths.truncate
     public var diffView = DiffViewMode.unified
     public var contextLines = 3
     public var ignoreWhitespace = false
@@ -93,6 +96,7 @@ public enum SettingsLoader {
         "base_branch": { s, v in guard !v.isEmpty else { return false }; s.baseBranch = v; return true },
         "layout.sidebar": { s, v in set(&s.sidebar, SidebarPosition(rawValue: enumValue(v))) },
         "layout.sidebar_size": { s, v in set(&s.sidebarSize, Double(v).flatMap { (0.1...0.9).contains($0) ? $0 : nil }) },
+        "layout.long_paths": { s, v in set(&s.longPaths, LongPaths(rawValue: enumValue(v))) },
         "layout.diff_position": { s, v in set(&s.diffPosition, DiffPosition(rawValue: enumValue(v))) },
         "diff.view": { s, v in set(&s.diffView, DiffViewMode(rawValue: enumValue(v))) },
         "diff.context_lines": { s, v in set(&s.contextLines, Int(v).flatMap { (0...1000).contains($0) ? $0 : nil }) },

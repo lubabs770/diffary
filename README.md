@@ -42,6 +42,7 @@ base_branch = "master"        # falls back to "main"
 sidebar = "right"             # right | left | bottom
 sidebar_size = 0.35           # 0.1–0.9, fraction of window
 diff_position = "below_list"  # below_list | beside_list | replace_terminal
+long_paths = "truncate"       # truncate (…/dir/file.ts) | scroll (full paths, scroll sideways)
 
 [diff]
 view = "unified"              # unified | side_by_side
