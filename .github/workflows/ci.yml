@@ -11,6 +11,6 @@ jobs:
       - name: Fetch GhosttyKit
         env:
           GH_TOKEN: ${{ github.token }}
-        run: scripts/fetch-ghosttykit.sh || echo "::warning::GhosttyKit release missing; run the GhosttyKit workflow"
+        run: scripts/fetch-ghosttykit.sh
       - run: swift build
       - run: swift test --no-parallel

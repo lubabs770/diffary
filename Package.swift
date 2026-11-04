@@ -16,6 +16,21 @@ let package = Package(
                 "TOMLKit",
             ]
         ),
+        .binaryTarget(name: "GhosttyKit", path: "Frameworks/GhosttyKit.xcframework"),
+        .executableTarget(
+            name: "Diffary",
+            dependencies: ["DiffaryCore", "GhosttyKit"],
+            // Swift 5 mode: Ghostty's C callbacks hop threads by hand; strict
+            // Swift 6 checking fights that without making it safer.
+            swiftSettings: [.swiftLanguageMode(.v5)],
+            linkerSettings: [
+                .linkedFramework("AppKit"), .linkedFramework("Carbon"),
+                .linkedFramework("CoreText"), .linkedFramework("CoreGraphics"),
+                .linkedFramework("Metal"), .linkedFramework("MetalKit"),
+                .linkedFramework("QuartzCore"), .linkedFramework("IOSurface"),
+                .linkedFramework("UniformTypeIdentifiers"), .linkedLibrary("c++"),
+            ]
+        ),
         .testTarget(name: "DiffaryCoreTests", dependencies: ["DiffaryCore"]),
     ]
 )
