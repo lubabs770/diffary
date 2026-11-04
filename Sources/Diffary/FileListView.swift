@@ -27,7 +27,7 @@ struct FileListView: View {
                 .scrollContentBackground(.hidden)
             }
         }
-        .font(.custom(model.settings.font, size: model.settings.fontSize))
+        .font(Font(monoFont(name: model.settings.font, size: model.settings.fontSize) as CTFont))
         .foregroundStyle(Color(t.foreground))
         .background(Color(t.sidebarBackground))
     }

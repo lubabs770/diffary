@@ -1,13 +1,20 @@
 import AppKit
 import DiffaryCore
-import Highlightr
+import JavaScriptCore
 import SwiftUI
+
+/// The configured font, or the system monospace font when that family isn't installed.
+func monoFont(name: String, size: Double) -> NSFont {
+    NSFont(name: name, size: size) ?? .monospacedSystemFont(ofSize: size, weight: .regular)
+}
 
 struct DiffView: View {
     @ObservedObject var model: AppModel
+    private let numW: CGFloat = 40, markerW: CGFloat = 10, gap: CGFloat = 8, pad: CGFloat = 6
 
     var body: some View {
         let t = model.theme
+        let nsFont = monoFont(name: model.settings.font, size: model.settings.fontSize)
         Group {
             switch model.diff {
             case nil: placeholder(model.selected == nil ? "Select a file" : "Loading…")
@@ -15,30 +22,46 @@ struct DiffView: View {
             case .tooLarge(let n)?: placeholder("Diff too large (\(n) lines). Open it in the terminal.")
             case .empty?: placeholder("No differences with current options")
             case .text(let hunks)?:
-                ScrollView([.vertical, .horizontal]) {
-                    LazyVStack(alignment: .leading, spacing: 0) {
-                        ForEach(Array(hunks.enumerated()), id: \.offset) { _, hunk in
-                            Text(hunk.header).foregroundStyle(Color(t.hunkHeader)).padding(.vertical, 2)
-                            if model.settings.diffView == .unified {
-                                ForEach(Array(hunk.lines.enumerated()), id: \.offset) { _, line in unifiedRow(line) }
-                            } else {
-                                ForEach(Array(hunk.sideBySideRows.enumerated()), id: \.offset) { _, row in
-                                    HStack(spacing: 0) {
-                                        half(row.left, number: row.left?.oldNumber)
-                                        Divider()
-                                        half(row.right, number: row.right?.newNumber)
+                GeometryReader { geo in
+                    let width = contentWidth(hunks, nsFont, viewport: geo.size.width)
+                    ScrollView([.vertical, .horizontal]) {
+                        LazyVStack(alignment: .leading, spacing: 0) {
+                            ForEach(Array(hunks.enumerated()), id: \.offset) { _, hunk in
+                                Text(hunk.header).foregroundStyle(Color(t.hunkHeader)).padding(.vertical, 2)
+                                if model.settings.diffView == .unified {
+                                    ForEach(Array(hunk.lines.enumerated()), id: \.offset) { _, line in unifiedRow(line) }
+                                } else {
+                                    ForEach(Array(hunk.sideBySideRows.enumerated()), id: \.offset) { _, row in
+                                        HStack(spacing: 0) {
+                                            half(row.left, number: row.left?.oldNumber)
+                                            Divider()
+                                            half(row.right, number: row.right?.newNumber)
+                                        }
                                     }
                                 }
                             }
                         }
+                        .padding(pad)
+                        .frame(width: width, alignment: .leading)
                     }
-                    .padding(6)
                 }
             }
         }
-        .font(.custom(model.settings.font, size: model.settings.fontSize))
+        .font(Font(nsFont as CTFont))
         .foregroundStyle(Color(t.foreground))
         .background(Color(t.background))
+    }
+
+    /// Every row is as wide as the viewport or the longest line, whichever is larger.
+    private func contentWidth(_ hunks: [Hunk], _ font: NSFont, viewport: CGFloat) -> CGFloat {
+        let advance = ("M" as NSString).size(withAttributes: [.font: font]).width
+        let chars = CGFloat(hunks.flatMap(\.lines).map { $0.text.count }.max() ?? 0)
+        let text = chars * advance
+        if model.settings.diffView == .unified {
+            return max(viewport, 2 * pad + 2 * numW + markerW + 3 * gap + text)
+        }
+        let half = max((viewport - 2 * pad - 1) / 2, numW + gap + text)
+        return 2 * pad + 2 * half + 1
     }
 
     private func placeholder(_ s: String) -> some View {
@@ -46,9 +69,10 @@ struct DiffView: View {
     }
 
     private func unifiedRow(_ line: DiffLine) -> some View {
-        HStack(spacing: 8) {
+        HStack(spacing: gap) {
             num(line.oldNumber); num(line.newNumber)
             Text(marker(line.kind)).foregroundStyle(Color(fg(line.kind)))
+                .frame(width: markerW).fixedSize().layoutPriority(1)
             code(line.text)
             Spacer(minLength: 0)
         }
@@ -57,18 +81,18 @@ struct DiffView: View {
     }
 
     private func half(_ line: DiffLine?, number: Int?) -> some View {
-        HStack(spacing: 8) {
+        HStack(spacing: gap) {
             num(number)
             if let line { code(line.text) } else { Text("") }
             Spacer(minLength: 0)
         }
-        .frame(minWidth: 300, maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color(line.map { bg($0.kind) } ?? RGBA(r: 0, g: 0, b: 0, a: 0)))
     }
 
     private func num(_ n: Int?) -> some View {
         Text(n.map(String.init) ?? "").foregroundStyle(Color(model.theme.lineNumber))
-            .frame(width: 40, alignment: .trailing)
+            .frame(width: numW, alignment: .trailing).fixedSize().layoutPriority(1)
     }
 
     private func code(_ text: String) -> some View {
@@ -78,9 +102,7 @@ struct DiffView: View {
     private func codeText(_ text: String) -> Text {
         guard model.settings.syntaxHighlight,
               let language = SyntaxHighlighter.language(for: model.selected?.path),
-              let attr = SyntaxHighlighter.shared.highlight(text, language: language, theme: model.theme),
-              // \.appKit scope keeps Highlightr's NSColor foregrounds visible to SwiftUI.
-              let styled = try? AttributedString(attr, including: \.appKit)
+              let styled = SyntaxHighlighter.shared.highlight(text, language: language, theme: model.theme)
         else { return Text(text) }
         return Text(styled)
     }
@@ -94,17 +116,22 @@ struct DiffView: View {
     }
 }
 
-/// Highlightr wrapper. Highlightr's Theme init is internal, so a custom CSS theme
-/// can't be loaded. Instead we highlight with the bundled atom-one-dark and remap
-/// its token colors onto the diffary theme's [syntax] colors, dropping fonts.
+/// highlight.js (the copy shipped in Highlightr's resource bundle) run in JavaScriptCore.
+/// Its HTML classes map to the diffary theme's [syntax] colors.
 @MainActor
 final class SyntaxHighlighter {
     static let shared = SyntaxHighlighter()
-    private let highlightr: Highlightr? = {
-        let h = Highlightr()
-        h?.setTheme(to: "atom-one-dark")
-        return h
+    private let fn: JSValue? = {
+        let dirs = [Bundle.main.resourceURL, Bundle.main.executableURL?.deletingLastPathComponent()].compactMap { $0 }
+        guard let path = dirs.compactMap({ Bundle(url: $0.appendingPathComponent("Highlightr_Highlightr.bundle")) })
+                  .compactMap({ $0.path(forResource: "highlight.min", ofType: "js") }).first,
+              let js = try? String(contentsOfFile: path, encoding: .utf8),
+              let ctx = JSContext() else { return nil }
+        ctx.evaluateScript(js)
+        return ctx.evaluateScript("(function(c,l){return hljs.highlight(c,{language:l,ignoreIllegals:true}).value})")
     }()
+    private var cache: [String: AttributedString] = [:]
+    private var themeKey = ""
 
     static func language(for path: String?) -> String? {
         guard let ext = path.map({ ($0 as NSString).pathExtension.lowercased() }), !ext.isEmpty else { return nil }
@@ -116,23 +143,22 @@ final class SyntaxHighlighter {
         return map[ext]
     }
 
-    // atom-one-dark token color (rgb hex) -> diffary [syntax] key; anything else is plain foreground.
-    private static let roles = ["c678dd": "keyword", "56b6c2": "keyword", "98c379": "string", "5c6370": "comment",
-                                "d19a66": "number", "e6c07b": "type", "61aeee": "type"]
-
-    func highlight(_ code: String, language: String, theme: DiffaryCore.Theme) -> NSAttributedString? {
-        guard let src = highlightr?.highlight(code, as: language, fastRender: true) else { return nil }
-        let out = NSMutableAttributedString(string: src.string)
-        let base = NSColor(theme.foreground)
-        out.addAttribute(.foregroundColor, value: base, range: NSRange(location: 0, length: out.length))
-        src.enumerateAttribute(.foregroundColor, in: NSRange(location: 0, length: src.length)) { value, range, _ in
-            guard let c = (value as? NSColor)?.usingColorSpace(.sRGB) else { return }
-            let hex = String(format: "%02x%02x%02x", Int((c.redComponent * 255).rounded()),
-                             Int((c.greenComponent * 255).rounded()), Int((c.blueComponent * 255).rounded()))
-            if let key = Self.roles[hex], let color = theme.syntax[key] {
-                out.addAttribute(.foregroundColor, value: NSColor(color), range: range)
-            }
+    func highlight(_ code: String, language: String, theme: DiffaryCore.Theme) -> AttributedString? {
+        let key = theme.syntax.map { "\($0.key)\($0.value.hex)" }.sorted().joined() + theme.foreground.hex
+        if key != themeKey { themeKey = key; cache.removeAll() }
+        let ck = language + "\0" + code
+        if let hit = cache[ck] { return hit }
+        guard let html = fn?.call(withArguments: [code, language]), html.isString else { return nil }
+        let (text, spans) = HighlightSpans.parse(html.toString() ?? "")
+        let out = NSMutableAttributedString(string: text)
+        out.addAttribute(.foregroundColor, value: NSColor(theme.foreground), range: NSRange(location: 0, length: out.length))
+        for span in spans {
+            if let c = theme.syntax[span.key] { out.addAttribute(.foregroundColor, value: NSColor(c), range: span.range) }
         }
-        return out
+        // \.appKit scope keeps the NSColor foregrounds visible to SwiftUI.
+        guard let styled = try? AttributedString(out, including: \.appKit) else { return nil }
+        if cache.count > 5000 { cache.removeAll() }
+        cache[ck] = styled
+        return styled
     }
 }
