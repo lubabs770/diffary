@@ -11,6 +11,13 @@ public struct Git: Sendable {
     public let repo: URL
     public init(repo: URL) { self.repo = repo }
 
+    /// The work tree root containing `dir`, or nil if it isn't in one.
+    public static func toplevel(of dir: URL) -> URL? {
+        guard let out = try? Git(repo: dir).run(["rev-parse", "--show-toplevel"]) else { return nil }
+        let path = out.trimmingCharacters(in: .newlines)
+        return path.isEmpty ? nil : URL(fileURLWithPath: path, isDirectory: true)
+    }
+
     /// Returns stdout. Throws GitError carrying stderr's first line when the
     /// exit code isn't in `allowExitCodes`.
     public func run(_ args: [String], allowExitCodes: Set<Int32> = [0]) throws -> String {

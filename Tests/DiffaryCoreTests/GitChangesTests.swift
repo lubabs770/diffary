@@ -91,4 +91,34 @@ import Testing
         #expect(set.files.first?.path == "img.bin")
         #expect(set.files.first?.additions == nil)
     }
+
+    @Test func lineCountSkipsSymlinksAndNonRegularFiles() throws {
+        let repo = try TempRepo()
+        try repo.write("dir/x.txt", "x\n")
+        let fm = FileManager.default
+        try fm.createSymbolicLink(at: repo.url.appendingPathComponent("dirlink"),
+                                  withDestinationURL: repo.url.appendingPathComponent("dir"))
+        try fm.createSymbolicLink(at: repo.url.appendingPathComponent("filelink"),
+                                  withDestinationURL: repo.url.appendingPathComponent("dir/x.txt"))
+        let changes = GitChanges(repo: repo.url, baseBranch: "master")
+        #expect(changes.lineCount(repo.url.appendingPathComponent("dirlink")) == nil)
+        #expect(changes.lineCount(repo.url.appendingPathComponent("filelink")) == nil)
+        #expect(changes.lineCount(repo.url.appendingPathComponent("dir")) == nil)
+        #expect(changes.lineCount(repo.url.appendingPathComponent("dir/x.txt")) == 1)
+    }
+
+    @Test func loadsFromToplevelResolvedFromSubdirectory() throws {
+        let repo = try featureRepo()
+        try repo.write("sub/s.txt", "s\n")
+        let root = try #require(Git.toplevel(of: repo.url.appendingPathComponent("sub")))
+        #expect(root.resolvingSymlinksInPath().path == repo.url.resolvingSymlinksInPath().path)
+        let set = try GitChanges(repo: root, baseBranch: "master").load()
+        #expect(set.files.map(\.path) == ["a.txt", "b.txt", "d.txt", "e.txt", "f.txt", "sub/s.txt"])
+    }
+
+    @Test func toplevelIsNilOutsideARepo() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        #expect(Git.toplevel(of: dir) == nil)
+    }
 }

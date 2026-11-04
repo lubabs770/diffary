@@ -5,6 +5,8 @@ import SwiftUI
 @MainActor
 final class AppModel: ObservableObject {
     let launch: Launch
+    /// Work tree root: git paths are root-relative even when launched from a subdirectory.
+    let root: URL
     @Published private(set) var settings = Settings()
     @Published private(set) var theme = Theme.dark
     @Published private(set) var warnings: [String] = []
@@ -22,9 +24,10 @@ final class AppModel: ObservableObject {
 
     init(launch: Launch) {
         self.launch = launch
+        root = Git.toplevel(of: launch.repo) ?? launch.repo
         reloadSettings()
         refresh()
-        repoWatcher = FileWatcher(paths: [launch.repo], ignoring: ["/.git/objects/", "/.git/logs/"]) { [weak self] in
+        repoWatcher = FileWatcher(paths: [root], ignoring: ["/.git/objects/", "/.git/logs/"]) { [weak self] in
             DispatchQueue.main.async { self?.refresh() }
         }
         repoWatcher?.start()
@@ -56,7 +59,7 @@ final class AppModel: ObservableObject {
     }
 
     func refresh() {
-        let repo = launch.repo, base = settings.baseBranch
+        let repo = root, base = settings.baseBranch
         work.async {
             let result = Result { try GitChanges(repo: repo, baseBranch: base).load() }
             DispatchQueue.main.async {
@@ -87,7 +90,7 @@ final class AppModel: ObservableObject {
 
     private func loadDiff() {
         guard let file = selected, let base = changes?.base else { diff = nil; return }
-        let repo = launch.repo, options = settings.diffOptions
+        let repo = root, options = settings.diffOptions
         work.async {
             let result = Result { try DiffLoader(repo: repo).load(file, base: base, options: options) }
             DispatchQueue.main.async {
