@@ -17,6 +17,13 @@ final class AppModel: ObservableObject {
     /// Sidebar share from dragging the border; nil = layout.sidebar_size.
     /// Cleared when that config value changes.
     @Published var draggedSidebarShare: Double?
+    /// Cmd-=/Cmd--/Cmd-0 offset on appearance.font_size, for this session.
+    @Published private(set) var fontZoom: Double = 0
+    var panelFontSize: Double { settings.fontSize + fontZoom }
+
+    func zoom(_ step: Zoom) {
+        fontZoom = Zoom.apply(step, offset: fontZoom, base: settings.fontSize)
+    }
     /// Bumped when Ghostty's config reloads, so views re-read the terminal font.
     @Published private(set) var terminalStyleVersion = 0
     private var ghosttyReloadObserver: NSObjectProtocol?

@@ -31,6 +31,11 @@ On a Command Line Tools-only machine plain `swift test` fails; run `scripts/test
 diffary [repo] [--config FILE] [--base BRANCH] [--set key=value]...
 ```
 
+## Keys
+
+- **Cmd-= / Cmd-- / Cmd-0:** bigger, smaller, reset. The terminal follows your Ghostty keybinds; the sidebar and diff zoom in 1pt steps from `font_size` (until restart).
+- **Cmd-Shift-,:** reload Ghostty's config here and in every open Ghostty window.
+
 ## Config
 
 `$XDG_CONFIG_HOME/diffary/config.toml` (default `~/.config/diffary/config.toml`). `scripts/bundle.sh --install` creates it from `config.example.toml` if missing (never overwrites). Reloaded on save.

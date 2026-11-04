@@ -40,14 +40,14 @@ struct FileListView: View {
                 .frame(minWidth: 0, idealWidth: 0, maxWidth: .infinity)
             }
         }
-        .font(Font(monoFont(name: model.settings.font, size: model.settings.fontSize) as CTFont))
+        .font(Font(monoFont(name: model.settings.font, size: model.panelFontSize) as CTFont))
         .foregroundStyle(Color(t.foreground))
         .background(Color(t.sidebarBackground))
     }
 
     /// Width of the widest row: path text plus padding, status column, gaps and counts.
     private func rowWidth(_ files: [FileChange]) -> CGFloat {
-        let font = monoFont(name: model.settings.font, size: model.settings.fontSize)
+        let font = monoFont(name: model.settings.font, size: model.panelFontSize)
         let longest = files.map { f in f.oldPath.map { "\($0) → \(f.path)" } ?? f.path }
             .max { $0.count < $1.count } ?? ""
         let text = (longest as NSString).size(withAttributes: [.font: font]).width

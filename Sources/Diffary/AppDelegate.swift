@@ -9,6 +9,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     var terminal: TerminalView?
     var model: AppModel?
     private var titlebarSub: AnyCancellable?
+    private var zoomMonitor: Any?
 
     init(launch: Launch) { self.launch = launch }
 
@@ -27,6 +28,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         // Follow appearance.titlebar live (config reload).
         titlebarSub = model.$settings.map(\.titlebar).removeDuplicates()
             .sink { [weak window] show in window.map { Self.setTitlebar($0, visible: show) } }
+        // Cmd-=/-/0 zoom the panels; the event still reaches the terminal,
+        // whose Ghostty keybinds resize the terminal font.
+        zoomMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak model] event in
+            let mods = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+            if let step = Zoom.step(characters: event.charactersIgnoringModifiers ?? "",
+                                    command: mods.contains(.command),
+                                    otherModifiers: !mods.subtracting(.command).isEmpty) {
+                model?.zoom(step)
+            }
+            return event
+        }
         window.center()
         window.makeKeyAndOrderFront(nil)
         window.makeFirstResponder(terminal)

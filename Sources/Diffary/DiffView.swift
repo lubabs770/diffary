@@ -16,7 +16,7 @@ struct DiffView: View {
 
     var body: some View {
         let t = model.theme
-        let nsFont = monoFont(name: model.settings.font, size: model.settings.fontSize)
+        let nsFont = monoFont(name: model.settings.font, size: model.panelFontSize)
         VStack(spacing: 0) {
             if let file = model.selected {
                 pathHeader(file)
