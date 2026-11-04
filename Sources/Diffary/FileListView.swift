@@ -18,13 +18,18 @@ struct FileListView: View {
                 if files.isEmpty {
                     Text("No changes vs \(model.settings.baseBranch)").foregroundStyle(Color(t.lineNumber)).padding(8)
                 }
-                List(files, selection: Binding(
-                    get: { model.selected?.path },
-                    set: { path in model.select(files.first { $0.path == path }) }
-                )) { file in
-                    row(file, t).tag(file.path)
+                // Plain rows rather than List: the system selection highlight ignores the theme.
+                ScrollView {
+                    LazyVStack(spacing: 0) {
+                        ForEach(files) { file in
+                            row(file, t)
+                                .padding(.horizontal, 8).padding(.vertical, 3)
+                                .background(model.selected?.path == file.path ? Color(t.selection) : .clear)
+                                .contentShape(Rectangle())
+                                .onTapGesture { model.select(file) }
+                        }
+                    }
                 }
-                .scrollContentBackground(.hidden)
             }
         }
         .font(Font(monoFont(name: model.settings.font, size: model.settings.fontSize) as CTFont))
