@@ -91,9 +91,12 @@ public struct GitChanges: Sendable {
         return result
     }
 
-    /// Lines in an untracked file; nil if it looks binary (contains NUL).
+    /// Lines in an untracked file; nil if it isn't a regular file (symlinks
+    /// aren't followed), is over 16 MB, or looks binary (contains NUL).
     func lineCount(_ url: URL) -> Int? {
-        guard let data = try? Data(contentsOf: url) else { return nil }
+        guard let values = try? url.resourceValues(forKeys: [.isRegularFileKey, .fileSizeKey]),
+              values.isRegularFile == true, (values.fileSize ?? 0) <= 16 << 20,
+              let data = try? Data(contentsOf: url, options: .alwaysMapped) else { return nil }
         if data.contains(0) { return nil }
         let newlines = data.reduce(0) { $1 == 0x0A ? $0 + 1 : $0 }
         return newlines + (data.last.map { $0 == 0x0A ? 0 : 1 } ?? 0)
