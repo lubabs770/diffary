@@ -17,6 +17,37 @@ struct DiffView: View {
     var body: some View {
         let t = model.theme
         let nsFont = monoFont(name: model.settings.font, size: model.settings.fontSize)
+        VStack(spacing: 0) {
+            if let file = model.selected {
+                pathHeader(file)
+                Divider()
+            }
+            content(nsFont)
+        }
+        .font(Font(nsFont as CTFont))
+        .foregroundStyle(Color(t.foreground))
+        .background(Color(t.background))
+    }
+
+    /// Root-relative path of the open file ("old → new" for renames).
+    private func pathHeader(_ file: FileChange) -> some View {
+        HStack(spacing: 8) {
+            Text(file.oldPath.map { "\($0) → \(file.path)" } ?? file.path)
+                .lineLimit(1).truncationMode(.head)
+                .textSelection(.enabled)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            // When the diff covers the terminal, its close button lives here
+            // rather than floating over the path.
+            if model.settings.diffPosition == .replaceTerminal {
+                Button("Close diff (Esc)") { model.select(nil) }.keyboardShortcut(.cancelAction)
+            }
+        }
+        .padding(.horizontal, pad).padding(.vertical, 4)
+        .background(Color(model.theme.sidebarBackground))
+    }
+
+    @ViewBuilder private func content(_ nsFont: NSFont) -> some View {
+        let t = model.theme
         Group {
             switch model.diff {
             case nil: placeholder(model.selected == nil ? "Select a file" : "Loading…")
@@ -58,9 +89,6 @@ struct DiffView: View {
                 }
             }
         }
-        .font(Font(nsFont as CTFont))
-        .foregroundStyle(Color(t.foreground))
-        .background(Color(t.background))
     }
 
     /// Width of the longest line on either side, as rendered (tabs expanded).

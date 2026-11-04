@@ -68,10 +68,7 @@ struct LayoutView: View {
         ZStack {
             TerminalHost(terminal: terminal)
             if model.settings.diffPosition == .replaceTerminal, model.selected != nil {
-                diffPane.overlay(alignment: .topTrailing) {
-                    Button("Close diff (Esc)") { model.select(nil) }
-                        .keyboardShortcut(.cancelAction).padding(6)
-                }
+                diffPane  // its header carries the close button
             }
         }
     }
