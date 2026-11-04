@@ -61,6 +61,14 @@ import Testing
         #expect(load.warnings.count == 1)
     }
 
+    @Test func unreadableFileWarnsAndUsesDefaults() throws {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("diffary-\(UUID()).toml")
+        try Data([0xFF, 0xFE, 0x00]).write(to: url)
+        let load = SettingsLoader.load(file: url, overrides: [:])
+        #expect(load.settings == Settings())
+        #expect(load.warnings.count == 1)
+    }
+
     @Test func overridesApplyAfterFile() throws {
         let load = SettingsLoader.load(
             file: try file("[diff]\nview = \"unified\"\ncontext_lines = 2\n"),

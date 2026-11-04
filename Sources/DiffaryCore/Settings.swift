@@ -49,11 +49,12 @@ public enum SettingsLoader {
         var warnings: [String] = []
         var values: [(String, String)] = []
 
-        if let text = try? String(contentsOf: file, encoding: .utf8) {
+        if FileManager.default.fileExists(atPath: file.path) {
             do {
+                let text = try String(contentsOf: file, encoding: .utf8)
                 values = flatten(try TOMLTable(string: text), prefix: "")
             } catch {
-                warnings.append("\(file.lastPathComponent): \(error)")
+                warnings.append("\(file.lastPathComponent): \(error.localizedDescription)")
             }
         }
         values += overrides.sorted { $0.key < $1.key }
