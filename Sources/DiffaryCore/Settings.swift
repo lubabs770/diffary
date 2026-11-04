@@ -91,10 +91,10 @@ public enum SettingsLoader {
 
     static let setters: [String: Setter] = [
         "base_branch": { s, v in guard !v.isEmpty else { return false }; s.baseBranch = v; return true },
-        "layout.sidebar": { s, v in set(&s.sidebar, SidebarPosition(rawValue: v)) },
+        "layout.sidebar": { s, v in set(&s.sidebar, SidebarPosition(rawValue: enumValue(v))) },
         "layout.sidebar_size": { s, v in set(&s.sidebarSize, Double(v).flatMap { (0.1...0.9).contains($0) ? $0 : nil }) },
-        "layout.diff_position": { s, v in set(&s.diffPosition, DiffPosition(rawValue: v)) },
-        "diff.view": { s, v in set(&s.diffView, DiffViewMode(rawValue: v)) },
+        "layout.diff_position": { s, v in set(&s.diffPosition, DiffPosition(rawValue: enumValue(v))) },
+        "diff.view": { s, v in set(&s.diffView, DiffViewMode(rawValue: enumValue(v))) },
         "diff.context_lines": { s, v in set(&s.contextLines, Int(v).flatMap { (0...1000).contains($0) ? $0 : nil }) },
         "diff.ignore_whitespace": { s, v in set(&s.ignoreWhitespace, Bool(v)) },
         "diff.syntax_highlight": { s, v in set(&s.syntaxHighlight, Bool(v)) },
@@ -103,6 +103,9 @@ public enum SettingsLoader {
         "appearance.theme": { s, v in guard !v.isEmpty else { return false }; s.theme = v; return true },
         "appearance.titlebar": { s, v in set(&s.titlebar, Bool(v)) },
     ]
+
+    /// "beside-list" and "beside_list" both work.
+    private static func enumValue(_ v: String) -> String { v.replacingOccurrences(of: "-", with: "_") }
 
     private static func set<T>(_ target: inout T, _ value: T?) -> Bool {
         guard let value else { return false }

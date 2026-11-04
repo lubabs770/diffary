@@ -112,3 +112,14 @@ import Testing
         #expect(load.settings == Settings())
     }
 }
+
+@Suite struct HyphenAliasTests {
+    @Test func enumValuesAcceptHyphens() {
+        let load = SettingsLoader.load(file: URL(fileURLWithPath: "/nonexistent"), overrides: [
+            "layout.diff_position": "beside-list", "diff.view": "side-by-side",
+        ])
+        #expect(load.warnings.isEmpty)
+        #expect(load.settings.diffPosition == .besideList)
+        #expect(load.settings.diffView == .sideBySide)
+    }
+}
