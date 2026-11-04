@@ -1,0 +1,15 @@
+name: CI
+on:
+  push:
+  pull_request:
+jobs:
+  test:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v5
+      - name: Fetch GhosttyKit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: scripts/fetch-ghosttykit.sh || echo "::warning::GhosttyKit release missing; run the GhosttyKit workflow"
+      - run: swift build
+      - run: swift test

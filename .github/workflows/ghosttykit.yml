@@ -1,0 +1,41 @@
+name: GhosttyKit
+on:
+  workflow_dispatch:
+  push:
+    paths: [GHOSTTY_COMMIT, .github/workflows/ghosttykit.yml]
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v5
+      - id: pin
+        run: echo "sha=$(tr -d '[:space:]' < GHOSTTY_COMMIT)" >> "$GITHUB_OUTPUT"
+      - name: Select newest Xcode
+        run: |
+          ls -d /Applications/Xcode*.app
+          sudo xcode-select -s "$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)"
+          xcodebuild -version
+      - uses: actions/checkout@v5
+        with:
+          repository: ghostty-org/ghostty
+          ref: ${{ steps.pin.outputs.sha }}
+          path: ghostty
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: 0.17.0
+      - name: Build GhosttyKit
+        working-directory: ghostty
+        run: zig build -Doptimize=ReleaseFast -Demit-macos-app=false -Dxcframework-target=native
+      - name: Zip
+        run: cd ghostty/macos && zip -qry "$GITHUB_WORKSPACE/GhosttyKit.xcframework.zip" GhosttyKit.xcframework
+      - name: Publish release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="ghosttykit-${{ steps.pin.outputs.sha }}"
+          gh release view "$tag" >/dev/null 2>&1 || \
+            gh release create "$tag" --title "$tag" \
+              --notes "GhosttyKit from ghostty-org/ghostty@${{ steps.pin.outputs.sha }}"
+          gh release upload "$tag" GhosttyKit.xcframework.zip --clobber
