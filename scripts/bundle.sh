@@ -20,6 +20,7 @@ cat > "$app/Contents/Info.plist" <<'PLIST'
   <key>CFBundleIdentifier</key><string>io.github.lubabs770.diffary</string>
   <key>CFBundleExecutable</key><string>Diffary</string>
   <key>CFBundleIconFile</key><string>AppIcon</string>
+  <key>NSAppleEventsUsageDescription</key><string>Diffary reloads Ghostty's config in your open Ghostty windows when you change it, so they stay in sync.</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleShortVersionString</key><string>0.1.0</string>
   <key>LSMinimumSystemVersion</key><string>14.0</string>

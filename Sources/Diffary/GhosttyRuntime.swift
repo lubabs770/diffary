@@ -92,9 +92,32 @@ final class GhosttyRuntime {
         }
         guard let config else { return }
         ghostty_app_update_config(app, config)
+        if !soft { Self.reloadGhosttyApp() }
         // Surfaces apply the new font a beat later; read it back after that.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
             NotificationCenter.default.post(name: Self.configReloaded, object: nil)
+        }
+    }
+
+    /// Keep Ghostty.app in step: a reload here reloads every Ghostty window, as
+    /// Cmd-Shift-, does there. Only if Ghostty is already running (never launch
+    /// it), off the main thread, and fire-and-forget. macOS asks the user once
+    /// to allow Diffary to control Ghostty.
+    private static func reloadGhosttyApp() {
+        guard !NSRunningApplication.runningApplications(withBundleIdentifier: "com.mitchellh.ghostty").isEmpty
+        else { return }
+        let script = """
+            tell application id "com.mitchellh.ghostty"
+              if (count of windows) > 0 then perform action "reload_config" on focused terminal of selected tab of front window
+            end tell
+            """
+        DispatchQueue.global(qos: .utility).async {
+            let p = Process()
+            p.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
+            p.arguments = ["-e", script]
+            p.standardOutput = FileHandle.nullDevice
+            p.standardError = FileHandle.nullDevice
+            try? p.run()
         }
     }
 
