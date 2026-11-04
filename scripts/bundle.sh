@@ -29,4 +29,10 @@ echo "built $app"
 if [[ ${1:-} == --install ]]; then
   mkdir -p ~/Applications && rm -rf ~/Applications/Diffary.app && cp -R "$app" ~/Applications/
   echo "installed ~/Applications/Diffary.app"
+  # Seed a commented config the first time; never overwrite an existing one.
+  conf="${XDG_CONFIG_HOME:-$HOME/.config}/diffary/config.toml"
+  if [[ ! -e $conf ]]; then
+    mkdir -p "$(dirname "$conf")/themes" && cp config.example.toml "$conf"
+    echo "created $conf"
+  fi
 fi

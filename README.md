@@ -29,7 +29,7 @@ diffary [repo] [--config FILE] [--base BRANCH] [--set key=value]...
 
 ## Config
 
-`$XDG_CONFIG_HOME/diffary/config.toml` (default `~/.config/diffary/config.toml`). Reloaded on save.
+`$XDG_CONFIG_HOME/diffary/config.toml` (default `~/.config/diffary/config.toml`). `scripts/bundle.sh --install` creates it from `config.example.toml` if missing (never overwrites). Reloaded on save.
 
 ```toml
 base_branch = "master"        # falls back to "main"

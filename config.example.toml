@@ -1,0 +1,21 @@
+# diffary config. Every line shows the default; uncomment to change it.
+# Saved changes apply live. Custom themes go in themes/<name>.toml next to this file.
+
+# base_branch = "master"        # falls back to "main"
+
+[layout]
+# sidebar = "right"             # right | left | bottom
+# sidebar_size = 0.35           # 0.1–0.9, fraction of window
+# diff_position = "below_list"  # below_list | beside_list | replace_terminal
+
+[diff]
+# view = "unified"              # unified | side_by_side
+# context_lines = 3             # lines before/after each change, 0–1000
+# ignore_whitespace = false
+# syntax_highlight = true
+
+[appearance]
+# font = "JetBrains Mono"       # falls back to system monospace if missing
+# font_size = 13
+# theme = "ghostty"             # ghostty (match the terminal) | auto | light | dark | <user theme name>
+# titlebar = false              # true shows the window title bar

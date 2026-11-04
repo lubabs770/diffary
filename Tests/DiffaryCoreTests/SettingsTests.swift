@@ -99,3 +99,16 @@ import Testing
         #expect(load.warnings.isEmpty)
     }
 }
+
+@Suite struct ExampleConfigTests {
+    /// config.example.toml (copied on install) must load cleanly as plain defaults.
+    @Test func exampleConfigIsDefaultsWithNoWarnings() {
+        let file = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("config.example.toml")
+        let load = SettingsLoader.load(file: file, overrides: [:])
+        #expect(FileManager.default.fileExists(atPath: file.path))
+        #expect(load.warnings.isEmpty)
+        #expect(load.settings == Settings())
+    }
+}
