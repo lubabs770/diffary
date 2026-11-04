@@ -71,7 +71,7 @@ ignore_whitespace = false
 syntax_highlight = true
 
 [appearance]
-font = "JetBrains Mono"       # falls back to system monospace if missing
+font = "terminal"             # terminal = Ghostty's font; else a font name; system monospace if missing
 font_size = 13
 theme = "ghostty"             # ghostty (match the terminal) | auto | light | dark | <user theme name>
 titlebar = false              # true shows the window title bar

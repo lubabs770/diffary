@@ -3,9 +3,11 @@ import DiffaryCore
 import JavaScriptCore
 import SwiftUI
 
-/// The configured font, or the system monospace font when that family isn't installed.
-func monoFont(name: String, size: Double) -> NSFont {
-    NSFont(name: name, size: size) ?? .monospacedSystemFont(ofSize: size, weight: .regular)
+/// The configured font ("terminal" = the terminal's own font), or the system
+/// monospace font when that one isn't installed.
+@MainActor func monoFont(name: String, size: Double) -> NSFont {
+    let resolved = name == "terminal" ? GhosttyRuntime.shared.terminalFontName : name
+    return resolved.flatMap { NSFont(name: $0, size: size) } ?? .monospacedSystemFont(ofSize: size, weight: .regular)
 }
 
 struct DiffView: View {

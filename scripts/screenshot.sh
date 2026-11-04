@@ -23,9 +23,18 @@ printf 'func farewell() -> String { "Bye" }\n' > src/farewell.swift
 zdot=$(dirname "$demo")/zdot
 mkdir -p "$zdot" && printf "PROMPT='%%F{blue}demo%%f %%F{yellow}feat%%f \$ '\n" > "$zdot/.zshrc"
 
-open -g -n -a "$APP" --env ZDOTDIR="$zdot" --args "$demo" "$@"
+before=$(pgrep -x Diffary | sort || true)
+# Empty config: screenshots show defaults, not the local user's settings.
+open -g -n -a "$APP" --env ZDOTDIR="$zdot" --args "$demo" --config "$zdot/none.toml" "$@"
 sleep 3
-pid=$(pgrep -n -x Diffary)
+# Only the Diffary we just launched: never touch one the user has open.
+pid=""
+for _ in 1 2 3 4 5; do
+  pid=$(pgrep -x Diffary | sort | comm -13 <(echo "$before") - | head -1 || true)
+  [[ -n $pid ]] && break
+  sleep 1
+done
+[[ -n $pid ]] || { echo "Diffary didn't start" >&2; exit 1; }
 id=$(swift "$here/window-id.swift" "$pid")
 screencapture -o -x -l"$id" "$out"
 echo "saved $out"

@@ -91,6 +91,7 @@ import Testing
     @Test func defaultsMatchTerminalAndHideTitlebar() {
         #expect(Settings().theme == "ghostty")
         #expect(Settings().titlebar == false)
+        #expect(Settings().font == "terminal")
     }
 
     @Test func titlebarCanBeTurnedOn() {

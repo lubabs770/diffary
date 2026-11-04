@@ -11,6 +11,8 @@ final class GhosttyRuntime {
     private(set) var error: String?
     /// Kept for reading values back (colors); never freed, lives as long as the app.
     private var config: ghostty_config_t?
+    /// PostScript name of the terminal's font, set once the first surface exists.
+    var terminalFontName: String?
 
     private init() {
         // ghostty_init may keep argv, so pass the process's own (lives forever).

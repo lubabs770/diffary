@@ -14,6 +14,9 @@ final class AppModel: ObservableObject {
     @Published private(set) var gitError: String?
     @Published private(set) var selected: FileChange?
     @Published private(set) var diff: FileDiff?
+    /// Sidebar share from dragging the border; nil = layout.sidebar_size.
+    /// Cleared when that config value changes.
+    @Published var draggedSidebarShare: Double?
 
     private var repoWatcher: FileWatcher?
     private var configWatcher: FileWatcher?
@@ -54,6 +57,7 @@ final class AppModel: ObservableObject {
         let baseChanged = load.settings.baseBranch != settings.baseBranch
         let diffChanged = load.settings.diffOptions != settings.diffOptions
         // Only publish real changes: every config-dir event lands here.
+        if settings.sidebarSize != load.settings.sidebarSize { draggedSidebarShare = nil }
         if settings != load.settings { settings = load.settings }
         if theme != resolved.theme { theme = resolved.theme }
         let newWarnings = load.warnings + resolved.warnings

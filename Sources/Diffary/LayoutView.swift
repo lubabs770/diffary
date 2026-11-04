@@ -41,20 +41,26 @@ struct LayoutView: View {
         return GeometryReader { geo in
             let horizontal = s.sidebar != .bottom
             let total = horizontal ? geo.size.width : geo.size.height
-            let side = total * s.sidebarSize
-            let main = VStack(spacing: 0) { topStrip(terminalColor); mainArea }.frame(width: horizontal ? total - side : nil,
-                                      height: horizontal ? nil : total - side)
+            let side = total * (model.draggedSidebarShare ?? s.sidebarSize)
+            let main = VStack(spacing: 0) { topStrip(terminalColor); mainArea }
+                .frame(width: horizontal ? total - side : nil, height: horizontal ? nil : total - side)
             let bar = VStack(spacing: 0) {
                 if horizontal { topStrip(model.theme.sidebarBackground) }
                 sidebar
             }.frame(maxWidth: .infinity, maxHeight: .infinity)
                 .frame(width: horizontal ? side : nil, height: horizontal ? nil : side)
+            let handle = SplitHandle(horizontal: horizontal) { location in
+                let pos = horizontal ? location.x : location.y
+                let share = s.sidebar == .left ? pos / total : (total - pos) / total
+                model.draggedSidebarShare = min(max(share, 0.1), 0.9)
+            }
             switch s.sidebar {
-            case .right: HStack(spacing: 0) { main; Divider(); bar }
-            case .left: HStack(spacing: 0) { bar; Divider(); main }
-            case .bottom: VStack(spacing: 0) { main; Divider(); bar }
+            case .right: HStack(spacing: 0) { main; handle; bar }
+            case .left: HStack(spacing: 0) { bar; handle; main }
+            case .bottom: VStack(spacing: 0) { main; handle; bar }
             }
         }
+        .coordinateSpace(name: SplitHandle.space)
     }
 
     /// Terminal, unless diff_position = replace_terminal and a file is selected.
@@ -97,4 +103,29 @@ struct WindowDragArea: NSViewRepresentable {
     }
     func makeNSView(context: Context) -> NSView { DragView() }
     func updateNSView(_ view: NSView, context: Context) {}
+}
+
+/// Draggable border between the terminal and the sidebar: a 1pt line with a
+/// wider invisible grab area and the resize cursor.
+struct SplitHandle: View {
+    static let space = "diffary.panes"
+    let horizontal: Bool
+    let onDrag: (CGPoint) -> Void
+
+    var body: some View {
+        Divider()
+            .frame(width: horizontal ? 1 : nil, height: horizontal ? nil : 1)
+            .overlay(
+                Color.clear
+                    .frame(width: horizontal ? 7 : nil, height: horizontal ? nil : 7)
+                    .contentShape(Rectangle())
+                    .onHover { inside in
+                        if inside { (horizontal ? NSCursor.resizeLeftRight : NSCursor.resizeUpDown).push() }
+                        else { NSCursor.pop() }
+                    }
+                    .gesture(DragGesture(minimumDistance: 1, coordinateSpace: .named(Self.space))
+                        .onChanged { onDrag($0.location) })
+            )
+            .zIndex(1)
+    }
 }

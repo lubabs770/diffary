@@ -34,6 +34,11 @@ final class TerminalView: NSView {
             return ghostty_surface_new(app, &cfg)
         }
         if surface == nil { startupError = "ghostty_surface_new failed" }
+        // Ghostty hands back a +1 CTFont copy.
+        if let surface, let raw = ghostty_surface_quicklook_font(surface) {
+            let font = Unmanaged<CTFont>.fromOpaque(raw).takeRetainedValue()
+            GhosttyRuntime.shared.terminalFontName = CTFontCopyPostScriptName(font) as String
+        }
     }
 
     required init?(coder: NSCoder) { fatalError("not used") }

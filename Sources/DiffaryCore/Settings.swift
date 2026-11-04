@@ -16,7 +16,7 @@ public struct Settings: Sendable, Equatable {
     public var contextLines = 3
     public var ignoreWhitespace = false
     public var syntaxHighlight = true
-    public var font = "JetBrains Mono"
+    public var font = "terminal"
     public var fontSize = 13.0
     public var theme = "ghostty"
     public var titlebar = false
